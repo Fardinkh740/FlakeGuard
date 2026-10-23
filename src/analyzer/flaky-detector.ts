@@ -70,6 +70,15 @@ const flakyRate = total > 0
 
 const updatedAt = new Date().toISOString();
 
+
+const flakyTests = tests
+  .filter(test => test.status === 'flaky')
+  .map(test => ({
+    name: test.name,
+    browser: test.browser,
+    retries: test.retries,
+  }));
+
 const summary = {
   passed,
   flaky,
@@ -78,7 +87,9 @@ const summary = {
   flakyRate,
   updatedAt,
   tests,
+  flakyTests,
 };
+
 
 fs.writeFileSync(summaryPath, JSON.stringify(summary, null, 2));
 
@@ -98,11 +109,7 @@ const fingerprint = tests
     `${a.browser}:${a.name}`.localeCompare(`${b.browser}:${b.name}`)
   );
 
-const runId = crypto
-  .createHash('sha256')
-  .update(JSON.stringify(fingerprint))
-  .digest('hex')
-  .slice(0, 12);
+const runId = crypto.randomUUID();
 
 const alreadySaved = history.some(
   (run: { runId?: string }) => run.runId === runId
@@ -117,6 +124,7 @@ if (!alreadySaved) {
     failed,
     total,
     flakyRate,
+    flakyTests,
   });
 
   fs.writeFileSync(historyPath, JSON.stringify(history, null, 2));

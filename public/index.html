@@ -55,27 +55,35 @@
     </div>
     </section>
 
-    <section class="card details">
-      <h2>Test results</h2>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Test</th>
-              <th>Browser</th>
-              <th>Status</th>
-              <th>Retries</th>
-            </tr>
-          </thead>
-          <tbody id="test-list">
-            <tr>
-              <td colspan="4">No test results available</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-  </main>
+
+<section class="card details">
+  <h2>Test results</h2>
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Test</th>
+          <th>Browser</th>
+          <th>Status</th>
+          <th>Retries</th>
+        </tr>
+      </thead>
+      <tbody id="test-list">
+        <tr>
+          <td colspan="4">No test results available</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card details">
+  <h2>Flaky tests detected</h2>
+  <p>Tests that failed initially but passed on retry.</p>
+  <div id="flaky-tests">Loading flaky tests...</div>
+</section>
+</main>
+
 
   <script>
     async function loadSummary() {
@@ -162,7 +170,6 @@
       }
     }
 
-
 async function loadHistory() {
   const chart = document.getElementById('history-chart');
 
@@ -185,18 +192,20 @@ async function loadHistory() {
       message.setAttribute('x', '20');
       message.setAttribute('y', '50');
       message.textContent = 'No history available yet';
-
       chart.append(message);
       return;
     }
 
-    chart.setAttribute('viewBox', '0 0 700 260');
-
     const runs = history.slice(-10);
+    const chartWidth = Math.max(700, runs.length * 90 + 100);
     const left = 55;
+    const right = 25;
     const top = 25;
-    const width = 610;
     const height = 160;
+    const width = chartWidth - left - right;
+
+    chart.setAttribute('viewBox', `0 0 ${chartWidth} 260`);
+    chart.setAttribute('preserveAspectRatio', 'xMinYMin meet');
 
     const points = runs.map((run, index) => {
       const x = runs.length === 1
@@ -214,7 +223,7 @@ async function loadHistory() {
 
       const gridLine = document.createElementNS(svgNS, 'line');
       gridLine.setAttribute('x1', String(left));
-      gridLine.setAttribute('x2', String(left + width));
+      gridLine.setAttribute('x2', String(chartWidth - right));
       gridLine.setAttribute('y1', String(y));
       gridLine.setAttribute('y2', String(y));
       gridLine.setAttribute('stroke', '#d1d5db');
@@ -262,14 +271,17 @@ async function loadHistory() {
 
       const dateLabel = document.createElementNS(svgNS, 'text');
       dateLabel.setAttribute('x', String(point.x));
-      dateLabel.setAttribute('y', String(top + height + 40));
+      dateLabel.setAttribute('y', String(top + height + 42));
       dateLabel.setAttribute('text-anchor', 'middle');
       dateLabel.setAttribute('font-size', '10');
 
       const date = new Date(point.run.updatedAt);
       dateLabel.textContent = Number.isNaN(date.getTime())
         ? ''
-        : date.toLocaleDateString();
+        : date.toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          });
 
       chart.append(dateLabel);
     });
@@ -277,10 +289,7 @@ async function loadHistory() {
     console.error(error);
     chart.replaceChildren();
 
-    const message = document.createElementNS(
-      'http://www.w3.org/2000/svg',
-      'text'
-    );
+    const message = document.createElementNS(svgNS, 'text');
     message.setAttribute('x', '20');
     message.setAttribute('y', '50');
     message.textContent = 'Could not load test history';
@@ -289,14 +298,62 @@ async function loadHistory() {
 }
 
 
+async function loadFlakyTests() {
+  const container = document.getElementById('flaky-tests');
+
+  try {
+    const response = await fetch('/api/summary');
+
+    if (!response.ok) {
+      throw new Error('Could not load summary');
+    }
+
+    const summary = await response.json();
+    const flakyTests = summary.flakyTests ?? [];
+
+    container.replaceChildren();
+
+    if (flakyTests.length === 0) {
+      container.textContent = 'No flaky tests detected.';
+      return;
+    }
+
+    const list = document.createElement('ul');
+
+    for (const test of flakyTests) {
+      const item = document.createElement('li');
+
+      const priority = test.retries >= 2
+        ? 'High'
+        : test.retries === 1
+          ? 'Medium'
+          : 'Low';
+
+      item.textContent =
+        `${test.name} — ${test.browser} — Retries: ${test.retries} — Priority: ${priority}`;
+
+      list.append(item);
+    }
+
+    container.append(list);
+  } catch (error) {
+    console.error(error);
+    container.textContent = 'Could not load flaky tests.';
+  }
+}
+
+
+
 document.getElementById('refresh-button')
   .addEventListener('click', async () => {
     await loadSummary();
     await loadHistory();
+    await loadFlakyTests();
   });
 
-loadSummary();
-loadHistory();
-  </script>
+  loadSummary();
+  loadHistory();
+  loadFlakyTests();
+</script>
 </body>
 </html>

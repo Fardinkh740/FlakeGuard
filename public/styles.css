@@ -230,4 +230,14 @@ header {
     align-items: flex-start;
   }
 }
+.chart {
+  width: 100%;
+  overflow-x: auto;
+}
 
+.chart svg {
+  display: block;
+  min-width: 700px;
+  width: 100%;
+  height: auto;
+}
