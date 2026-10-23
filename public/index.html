@@ -1,0 +1,302 @@
+
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlakeGuard</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="container">
+    <header>
+      <div>
+        <p class="eyebrow">QA AUTOMATION</p>
+        <h1>FlakeGuard</h1>
+        <p class="subtitle">Test reliability overview</p>
+      </div>
+      <button id="refresh-button">Refresh</button>
+    </header>
+
+    <p id="status">Loading test results...</p>
+
+    <section class="stats">
+      <article class="card">
+        <p>Total tests</p>
+        <h2 id="total">-</h2>
+      </article>
+      <article class="card">
+        <p>Passed</p>
+        <h2 id="passed">-</h2>
+      </article>
+      <article class="card">
+        <p>Flaky</p>
+        <h2 id="flaky">-</h2>
+      </article>
+      <article class="card">
+        <p>Failed</p>
+        <h2 id="failed">-</h2>
+      </article>
+    </section>
+    <section class="card details">
+      <h2>Latest test run</h2>
+      <p>Flaky rate: <strong id="flaky-rate">-</strong></p>
+      <p>Last updated: <span id="updated-at">-</span></p>
+    </section>
+    <section class="card details">
+    <h2>Flaky rate history</h2>
+    <p>Flaky rate per test run</p>
+    <div class="chart">
+        <svg id="history-chart"
+            viewBox="0 0 700 240"
+            role="img"
+            aria-label="Flaky rate chart">
+        </svg>
+    </div>
+    </section>
+
+    <section class="card details">
+      <h2>Test results</h2>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Test</th>
+              <th>Browser</th>
+              <th>Status</th>
+              <th>Retries</th>
+            </tr>
+          </thead>
+          <tbody id="test-list">
+            <tr>
+              <td colspan="4">No test results available</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    async function loadSummary() {
+      const status = document.getElementById('status');
+      const button = document.getElementById('refresh-button');
+
+      button.disabled = true;
+      status.textContent = 'Loading test results...';
+
+      try {
+        const response = await fetch('/api/summary');
+
+        if (!response.ok) {
+          throw new Error('Could not load test summary');
+        }
+
+        const data = await response.json();
+
+        document.getElementById('total').textContent = data.total;
+        document.getElementById('passed').textContent = data.passed;
+        document.getElementById('flaky').textContent = data.flaky;
+        document.getElementById('failed').textContent = data.failed;
+
+        const rate = data.total > 0
+          ? (data.flaky / data.total) * 100
+          : 0;
+
+        document.getElementById('flaky-rate').textContent =
+          `${rate.toFixed(1)}%`;
+
+        document.getElementById('updated-at').textContent =
+          new Date(data.updatedAt).toLocaleString();
+
+        const testList = document.getElementById('test-list');
+        testList.replaceChildren();
+
+        if (data.tests && data.tests.length > 0) {
+          for (const test of data.tests) {
+            const row = document.createElement('tr');
+
+            const name = document.createElement('td');
+            name.textContent = test.name;
+
+            const browser = document.createElement('td');
+            browser.textContent = test.browser;
+
+            const testStatus = document.createElement('td');
+            testStatus.textContent = test.status;
+
+            const retries = document.createElement('td');
+            retries.textContent = test.retries;
+
+            const statusClass = {
+              expected: 'passed',
+              flaky: 'flaky',
+              unexpected: 'failed'
+            }[test.status];
+
+            if (statusClass) {
+              testStatus.classList.add('status', statusClass);
+            }
+
+            row.append(name, browser, testStatus, retries);
+            testList.append(row);
+          }
+        } else {
+          const row = document.createElement('tr');
+          const cell = document.createElement('td');
+
+          cell.colSpan = 4;
+          cell.textContent = 'No test results available';
+
+          row.append(cell);
+          testList.append(row);
+        }
+
+        status.textContent = 'Test results loaded';
+      } catch (error) {
+        console.error(error);
+        status.textContent =
+          'Could not load results. Check the dashboard server and run the analyzer.';
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+
+async function loadHistory() {
+  const chart = document.getElementById('history-chart');
+
+  try {
+    const response = await fetch('/api/history');
+
+    if (!response.ok) {
+      throw new Error('Could not load test history');
+    }
+
+    const history = await response.json();
+    chart.replaceChildren();
+
+    const svgNS = 'http://www.w3.org/2000/svg';
+
+    if (history.length === 0) {
+      chart.setAttribute('viewBox', '0 0 700 100');
+
+      const message = document.createElementNS(svgNS, 'text');
+      message.setAttribute('x', '20');
+      message.setAttribute('y', '50');
+      message.textContent = 'No history available yet';
+
+      chart.append(message);
+      return;
+    }
+
+    chart.setAttribute('viewBox', '0 0 700 260');
+
+    const runs = history.slice(-10);
+    const left = 55;
+    const top = 25;
+    const width = 610;
+    const height = 160;
+
+    const points = runs.map((run, index) => {
+      const x = runs.length === 1
+        ? left + width / 2
+        : left + (index / (runs.length - 1)) * width;
+
+      const rate = Math.max(0, Math.min(100, Number(run.flakyRate) || 0));
+      const y = top + height - (rate / 100) * height;
+
+      return { x, y, rate, run };
+    });
+
+    for (const value of [0, 25, 50, 75, 100]) {
+      const y = top + height - (value / 100) * height;
+
+      const gridLine = document.createElementNS(svgNS, 'line');
+      gridLine.setAttribute('x1', String(left));
+      gridLine.setAttribute('x2', String(left + width));
+      gridLine.setAttribute('y1', String(y));
+      gridLine.setAttribute('y2', String(y));
+      gridLine.setAttribute('stroke', '#d1d5db');
+      chart.append(gridLine);
+
+      const label = document.createElementNS(svgNS, 'text');
+      label.setAttribute('x', '42');
+      label.setAttribute('y', String(y + 4));
+      label.setAttribute('text-anchor', 'end');
+      label.setAttribute('font-size', '12');
+      label.textContent = `${value}%`;
+      chart.append(label);
+    }
+
+    const line = document.createElementNS(svgNS, 'polyline');
+    line.setAttribute(
+      'points',
+      points.map(point => `${point.x},${point.y}`).join(' ')
+    );
+    line.setAttribute('fill', 'none');
+    line.setAttribute('stroke', '#2563eb');
+    line.setAttribute('stroke-width', '3');
+    chart.append(line);
+
+    points.forEach((point, index) => {
+      const circle = document.createElementNS(svgNS, 'circle');
+      circle.setAttribute('cx', String(point.x));
+      circle.setAttribute('cy', String(point.y));
+      circle.setAttribute('r', '5');
+      circle.setAttribute('fill', '#2563eb');
+
+      const tooltip = document.createElementNS(svgNS, 'title');
+      tooltip.textContent =
+        `Run ${index + 1}: ${point.rate.toFixed(1)}% flaky`;
+      circle.append(tooltip);
+      chart.append(circle);
+
+      const runLabel = document.createElementNS(svgNS, 'text');
+      runLabel.setAttribute('x', String(point.x));
+      runLabel.setAttribute('y', String(top + height + 22));
+      runLabel.setAttribute('text-anchor', 'middle');
+      runLabel.setAttribute('font-size', '12');
+      runLabel.textContent = `Run ${index + 1}`;
+      chart.append(runLabel);
+
+      const dateLabel = document.createElementNS(svgNS, 'text');
+      dateLabel.setAttribute('x', String(point.x));
+      dateLabel.setAttribute('y', String(top + height + 40));
+      dateLabel.setAttribute('text-anchor', 'middle');
+      dateLabel.setAttribute('font-size', '10');
+
+      const date = new Date(point.run.updatedAt);
+      dateLabel.textContent = Number.isNaN(date.getTime())
+        ? ''
+        : date.toLocaleDateString();
+
+      chart.append(dateLabel);
+    });
+  } catch (error) {
+    console.error(error);
+    chart.replaceChildren();
+
+    const message = document.createElementNS(
+      'http://www.w3.org/2000/svg',
+      'text'
+    );
+    message.setAttribute('x', '20');
+    message.setAttribute('y', '50');
+    message.textContent = 'Could not load test history';
+    chart.append(message);
+  }
+}
+
+
+document.getElementById('refresh-button')
+  .addEventListener('click', async () => {
+    await loadSummary();
+    await loadHistory();
+  });
+
+loadSummary();
+loadHistory();
+  </script>
+</body>
+</html>

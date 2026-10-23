@@ -1,0 +1,64 @@
+{
+  "passed": 6,
+  "flaky": 3,
+  "failed": 0,
+  "total": 9,
+  "flakyRate": 33.3,
+  "updatedAt": "2026-10-23T14:35:24.386Z",
+  "tests": [
+    {
+      "name": "has title",
+      "browser": "chromium",
+      "status": "expected",
+      "retries": 0
+    },
+    {
+      "name": "get started link",
+      "browser": "chromium",
+      "status": "expected",
+      "retries": 0
+    },
+    {
+      "name": "temporary flaky test",
+      "browser": "chromium",
+      "status": "flaky",
+      "retries": 1
+    },
+    {
+      "name": "has title",
+      "browser": "firefox",
+      "status": "expected",
+      "retries": 0
+    },
+    {
+      "name": "get started link",
+      "browser": "firefox",
+      "status": "expected",
+      "retries": 0
+    },
+    {
+      "name": "temporary flaky test",
+      "browser": "firefox",
+      "status": "flaky",
+      "retries": 1
+    },
+    {
+      "name": "has title",
+      "browser": "webkit",
+      "status": "expected",
+      "retries": 0
+    },
+    {
+      "name": "get started link",
+      "browser": "webkit",
+      "status": "expected",
+      "retries": 0
+    },
+    {
+      "name": "temporary flaky test",
+      "browser": "webkit",
+      "status": "flaky",
+      "retries": 1
+    }
+  ]
+}

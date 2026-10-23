@@ -1,0 +1,47 @@
+[
+  {
+    "runId": "fdf63127bd79",
+    "updatedAt": "2026-10-23T14:06:22.444Z",
+    "passed": 6,
+    "flaky": 3,
+    "failed": 0,
+    "total": 9,
+    "flakyRate": 33.3
+  },
+  {
+    "runId": "b9b5c5154fed",
+    "updatedAt": "2026-10-23T14:06:41.805Z",
+    "passed": 6,
+    "flaky": 3,
+    "failed": 0,
+    "total": 9,
+    "flakyRate": 33.3
+  },
+  {
+    "runId": "d0830dcfe747",
+    "updatedAt": "2026-10-23T14:10:16.045Z",
+    "passed": 6,
+    "flaky": 3,
+    "failed": 0,
+    "total": 9,
+    "flakyRate": 33.3
+  },
+  {
+    "runId": "5dea67ae5fd8",
+    "updatedAt": "2026-10-23T14:11:00.661Z",
+    "passed": 6,
+    "flaky": 3,
+    "failed": 0,
+    "total": 9,
+    "flakyRate": 33.3
+  },
+  {
+    "runId": "e4fa0db14f08",
+    "updatedAt": "2026-10-23T14:35:24.386Z",
+    "passed": 6,
+    "flaky": 3,
+    "failed": 0,
+    "total": 9,
+    "flakyRate": 33.3
+  }
+]
