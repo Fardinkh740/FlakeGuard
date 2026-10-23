@@ -46,6 +46,7 @@ jobs:
           cache: npm
 
       - run: npm ci
+      - run: sudo npx playwright install-deps ${{ matrix.browser }}
       - run: npx playwright install ${{ matrix.browser }}
       - run: npx playwright test --project=${{ matrix.browser }}
 
