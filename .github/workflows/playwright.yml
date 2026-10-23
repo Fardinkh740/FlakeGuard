@@ -1,5 +1,5 @@
 
-name: FlakeGuard CI
+name: FlakeGuard CI - Pull Request
 
 on:
   push:
@@ -46,7 +46,8 @@ jobs:
           cache: npm
 
       - run: npm ci
-      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: sudo npx playwright install-deps ${{ matrix.browser }}
+      - run: npx playwright install ${{ matrix.browser }}
       - run: npx playwright test --project=${{ matrix.browser }}
 
       - name: Upload Playwright report
